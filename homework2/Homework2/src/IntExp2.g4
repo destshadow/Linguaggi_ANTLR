@@ -17,6 +17,8 @@ var : STR '=' exp ';' var | ;
 
 prog : var exp;
 
+num : NEG | NAT;
+
 LPAR : '(';
 RPAR : ')';
 PLUS : '+';
