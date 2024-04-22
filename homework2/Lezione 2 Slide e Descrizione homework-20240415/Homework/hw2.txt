@@ -1,0 +1,131 @@
+####################Main.java####################
+
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
+// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+public class Main {
+    public static void main(String[] args) throws IOException {
+
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+
+        InputStream is = cl.getResourceAsStream(args[0]);
+
+        CharStream cs = CharStreams.fromStream(is);
+
+        IntExp2Lexer lexer = new IntExp2Lexer(cs);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+
+        IntExp2Parser parser = new IntExp2Parser(tokens);
+
+        ParseTree tree = parser.main();
+
+        IntExp2 interpreter = new IntExp2();
+        System.out.println(interpreter.visit(tree));
+    }
+}
+
+
+
+####################IntExp.java####################
+
+
+
+public class IntExp2 extends IntExp2BaseVisitor<Integer> {
+
+    @Override
+    public Integer visitMain(IntExp2Parser.MainContext ctx) {
+        return visit(ctx.exp());
+    }
+
+    @Override
+    public Integer visitMul(IntExp2Parser.MulContext ctx) {
+        int left = visit(ctx.exp(0));
+        int right = visit(ctx.exp(1));
+        return left * right;
+    }
+
+    @Override
+    public Integer visitPlus(IntExp2Parser.PlusContext ctx) {
+        int left = visit(ctx.exp(0));
+        int right = visit(ctx.exp(1));
+        return left + right;
+    }
+
+    @Override
+    public Integer visitNat(IntExp2Parser.NatContext ctx) {
+        return Integer.parseInt(ctx.NAT().getText());
+    }
+
+    public Integer visitNeg(IntExp2Parser.NegContext ctx) {
+        return Integer.parseInt(ctx.NEG().getText());
+    }
+
+    @Override
+    public Integer visitSub(IntExp2Parser.SubContext ctx) {
+        int left = visit(ctx.exp(0));
+        int right = visit(ctx.exp(1));
+        return left - right;
+    }
+
+    @Override
+    public Integer visitDiv(IntExp2Parser.DivContext ctx) {
+        int left = visit(ctx.exp(0));
+        int right = visit(ctx.exp(1));
+        return left / right;
+    }
+
+    public Integer visitMod(IntExp2Parser.ModContext ctx) {
+        int left = visit(ctx.exp(0));
+        int right = visit(ctx.exp(1));
+        return left % right;
+    }
+}
+
+
+
+
+
+
+####################IntExp.g4####################
+
+
+grammar IntExp2;
+
+
+
+main : exp EOF;
+
+exp : NAT                           # nat
+    | NEG                           # neg
+    | LPAR exp PLUS exp RPAR        # plus
+    | LPAR exp MUL exp RPAR         # mul
+    | LPAR exp SUB exp RPAR         # sub
+    | LPAR exp MOD exp RPAR         # mod
+    | LPAR exp DIV exp RPAR         # div
+    ;
+
+var : STR '=' exp ';' var | ;
+
+prog : var exp;
+
+LPAR : '(';
+RPAR : ')';
+PLUS : '+';
+MUL  : '*';
+SUB  : '-';
+MOD  : 'mod';
+DIV  : '/';
+
+STR  : [a-z]+;
+
+NAT : '0' | [1-9][0-9]*;
+NEG : '-' [1-9][0-9]*;
+
+WS : [ \t\n\r]+ -> skip;
