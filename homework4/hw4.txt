@@ -1,0 +1,147 @@
+####################Main.java####################
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
+// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+public class Main {
+    public static void main(String[] args) throws IOException {
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+
+        InputStream is = cl.getResourceAsStream(args[0]);
+
+        CharStream cs = CharStreams.fromStream(is);
+
+        IntExpLexer lexer = new IntExpLexer(cs);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+
+        IntExpParser parser = new IntExpParser(tokens);
+
+        ParseTree tree = parser.main();
+
+        IntExp interpreter = new IntExp();
+        System.out.println(interpreter.visit(tree));
+    }
+}
+
+
+
+
+
+
+
+####################IntExp.java####################
+public class IntExp extends IntExpBaseVisitor<Float>{
+    @Override
+    public Float visitMain(IntExpParser.MainContext ctx){
+        return visit(ctx.prog());
+    }
+
+    @Override
+    public Float visitProg(IntExpParser.ProgContext ctx){
+        return visit(ctx.init());
+    }
+
+    @Override
+    public Float visitIdinit(IntExpParser.IdinitContext ctx){
+        return visit(ctx.exp());
+    }
+
+    @Override
+    public Float visitNilinit(IntExpParser.NilinitContext ctx){
+        return null;
+    }
+
+    @Override
+    public Float visitDivMulMod(IntExpParser.DivMulModContext ctx){
+        return switch (ctx.op.getType()) {
+            case IntExpParser.DIV -> visit(ctx.exp(0)) / visit(ctx.exp(1));
+            case IntExpParser.MUL -> visit(ctx.exp(0)) * visit(ctx.exp(1));
+            case IntExpParser.MOD -> visit(ctx.exp(0)) % visit(ctx.exp(1));
+            default -> 0.0f;
+        };
+    }
+
+    @Override
+    public  Float visitPlusMinus(IntExpParser.PlusMinusContext ctx){
+        return switch (ctx.op.getType()){
+            case IntExpParser.MINUS -> visit(ctx.exp(0)) - visit(ctx.exp(1));
+            case IntExpParser.PLUS -> visit(ctx.exp(0)) + visit(ctx.exp(1));
+            default -> 0.0f;
+        };
+    }
+
+    @Override
+    public Float visitParExp(IntExpParser.ParExpContext ctx){
+        return visit(ctx.exp());
+    }
+
+    @Override
+    public Float visitNum(IntExpParser.NumContext ctx){
+        return Float.parseFloat(ctx.FLOAT().getText());
+    }
+
+    @Override
+    public Float visitPow(IntExpParser.PowContext ctx){
+        return (float) Math.pow( visit(ctx.exp(0)),  visit(ctx.exp(1)));
+    }
+
+    @Override
+    public Float visitId(IntExpParser.IdContext ctx){
+        return Float.parseFloat(ctx.ID().getText());
+    }
+
+}
+
+
+
+
+
+
+
+
+
+####################IntExp.g4####################
+grammar IntExp;
+
+main : prog EOF;
+
+prog : init exp;
+
+init: ID EQUAL exp SEMICOLON init   # idinit
+    |                               # nilinit
+    ;
+
+exp: FLOAT                                              # num
+    | ID                                                # id
+    | LPAR exp RPAR                                     # parExp
+    | <assoc=right> exp POW exp                         # pow
+    | exp op=(DIV | MUL | MOD) exp                      # divMulMod
+    | exp op=(PLUS | MINUS) exp                         # plusMinus
+    ;
+
+LPAR : '(' ;
+RPAR : ')' ;
+PLUS : '+' ;
+MUL  : '*' ;
+MOD  : '%' ;
+POW  : '^' ;
+DIV  : '/' ;
+MINUS: '-' ;
+
+
+FLOAT: INT | (INT | '-' '0') '.' DIGIT;
+fragment INT: NAT | '-' POS;
+fragment NAT: '0' | POS;
+fragment POS: POSDIGIT DIGIT*;
+fragment DIGIT: '0' | POSDIGIT;
+fragment POSDIGIT: [1-9];
+
+ID: [a-z]+;
+
+WS: [ \t\n\r]+ -> skip;
